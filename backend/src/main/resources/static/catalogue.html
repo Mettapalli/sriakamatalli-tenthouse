@@ -1,0 +1,34 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Item Catalogue</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"><link href="/css/style.css" rel="stylesheet"></head><body>
+<nav class="navbar navbar-dark bg-dark sticky-top"><div class="container"><a class="navbar-brand fw-bold" href="/index.html" data-biz-name>Tent House</a>
+<div class="d-flex gap-2"><a class="btn btn-outline-light btn-sm" href="/index.html">Home</a><a class="btn btn-outline-light btn-sm" href="/contact.html">Contact</a><a class="btn btn-warning btn-sm fw-semibold" href="/login.html">Admin</a></div></div></nav>
+<div class="container py-4">
+<div class="d-flex justify-content-between align-items-center mb-3"><h2 class="fw-bold mb-0">Material Catalogue (English &amp; à°¤à±†à°²à±à°—à±)</h2><span class="badge bg-primary fs-6" id="itemCountBadge">0 items</span></div>
+<div class="row g-2 mb-4"><div class="col-md-5"><input id="searchInput" class="form-control" placeholder="Search item (English / à°¤à±†à°²à±à°—à± / Code)..." oninput="loadItems()"></div>
+<div class="col-md-4"><select id="categoryFilter" class="form-select" onchange="loadItems()"><option value="">All Categories</option></select></div>
+<div class="col-md-3"><button class="btn btn-dark w-100" onclick="loadItems()">Filter Items</button></div></div>
+<div class="row g-3" id="itemsGrid"></div></div>
+<script src="/js/api.js"></script><script>
+async function loadCategories(){
+    const cats = await (await fetch('/api/public/categories')).json();
+    const sel = document.getElementById('categoryFilter');
+    cats.forEach(c => sel.add(new Option(c.nameTe ? `${c.name} (${c.nameTe})` : c.name, c.id)));
+}
+async function loadItems(){
+    const p = new URLSearchParams();
+    const c = document.getElementById('categoryFilter').value, k = document.getElementById('searchInput').value.trim();
+    if(c) p.append('categoryId', c); if(k) p.append('keyword', k);
+    const items = await (await fetch(`/api/public/items?${p}`)).json();
+    document.getElementById('itemCountBadge').textContent = `${items.length} items`;
+    document.getElementById('itemsGrid').innerHTML = items.map(i => {
+        const img = (i.images||[]).find(x=>x.isPrimary) || (i.images||[])[0];
+        return `<div class="col-sm-6 col-lg-4"><div class="card h-100 item-card p-3">
+        ${img ? `<img src="${img.imageUrl}" class="rounded mb-2" style="height:160px;object-fit:cover;">` : ''}
+        <div class="d-flex justify-content-between mb-1"><span class="badge bg-light text-dark border">${i.itemCode}</span><span class="badge bg-secondary">${i.category?i.category.name:''}</span></div>
+        <h6 class="fw-bold mb-1">${i.name}</h6><p class="text-muted small mb-2">${i.nameTe||''}</p>
+        <div class="mt-auto d-flex justify-content-between align-items-center pt-2 border-top"><span class="fs-5 fw-bold text-success">â‚¹${Number(i.rentalPrice).toFixed(2)}</span><small class="text-muted">${i.priceUnit.replace('_',' ')}</small></div>
+        </div></div>`;
+    }).join('');
+}
+loadBusinessIdentity(); loadCategories(); loadItems();
+</script></body></html>
