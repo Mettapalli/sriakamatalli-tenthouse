@@ -1,0 +1,60 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Items & Pricing</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"><link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"><link href="/css/style.css" rel="stylesheet"></head><body>
+<div class="container-fluid"><div class="row"><aside id="adminSidebar" class="col-md-3 col-lg-2 admin-sidebar p-3"></aside>
+<main class="col-md-9 col-lg-10 p-4">
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2"><h3 class="fw-bold mb-0">Item Entry &amp; Inventory</h3>
+<div class="d-flex gap-2"><a href="/api/admin/items/export/excel" class="btn btn-outline-success btn-sm">Export Excel</a>
+<label class="btn btn-outline-primary btn-sm mb-0">Import Excel<input type="file" accept=".xlsx" hidden onchange="impExcel(this)"></label>
+<button class="btn btn-dark btn-sm" onclick="openI()">+ Add Item</button></div></div>
+<div id="alertBox" class="alert d-none"></div>
+<div class="row g-2 mb-3"><div class="col-md-4"><input id="searchBox" class="form-control" placeholder="Search English / à°¤à±†à°²à±à°—à± / Code..."></div>
+<div class="col-md-3"><select id="filterCat" class="form-select"><option value="">All Categories</option></select></div>
+<div class="col-md-2"><select id="sortSelect" class="form-select"><option value="id:asc">Default</option><option value="rentalPrice:asc">Price Low-High</option><option value="rentalPrice:desc">Price High-Low</option><option value="name:asc">Name A-Z</option></select></div>
+<div class="col-md-3"><button class="btn btn-dark w-100" onclick="loadI()">Search &amp; Filter</button></div></div>
+<div class="card shadow-sm"><div class="table-responsive"><table class="table table-hover align-middle mb-0 small"><thead class="table-light"><tr><th>Code</th><th>Photo</th><th>Item Name</th><th>Category</th><th>Avail/Tot/Dmg</th><th>Price</th><th>Status</th><th class="text-end">Actions</th></tr></thead><tbody id="itemsTable"></tbody></table></div></div>
+</main></div></div>
+<div class="modal fade" id="itemModal" tabindex="-1"><div class="modal-dialog modal-lg"><form id="itemForm" class="modal-content">
+<div class="modal-header"><h5 class="modal-title">Item Details</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+<div class="modal-body"><input type="hidden" id="itemId"><div class="row g-2">
+<div class="col-md-4"><label class="form-label">Item Code</label><input id="itemCode" class="form-control" placeholder="Auto if blank"></div>
+<div class="col-md-8"><label class="form-label">Category *</label><select id="itemCategory" class="form-select" required></select></div>
+<div class="col-md-6"><label class="form-label">Name (English) *</label><input id="itemName" class="form-control" required></div>
+<div class="col-md-6"><label class="form-label">Name (Telugu)</label><input id="itemNameTe" class="form-control"></div>
+<div class="col-md-4"><label class="form-label">Total Qty *</label><input id="totalQty" type="number" min="0" class="form-control" value="10" required></div>
+<div class="col-md-4"><label class="form-label">Available Qty</label><input id="availQty" type="number" min="0" class="form-control"></div>
+<div class="col-md-4"><label class="form-label">Damaged Qty</label><input id="dmgQty" type="number" min="0" class="form-control" value="0"></div>
+<div class="col-md-4"><label class="form-label">Rental Price (â‚¹) *</label><input id="rentalPrice" type="number" step="0.01" min="0" class="form-control" required></div>
+<div class="col-md-4"><label class="form-label">Unit</label><select id="priceUnit" class="form-select"><option>PER_DAY</option><option>PER_PIECE</option><option>PER_EVENT</option><option>PER_SET</option><option>PER_SQFT</option><option>PER_METRE</option><option>CUSTOM</option></select></div>
+<div class="col-md-4"><label class="form-label">Status</label><select id="itemStatus" class="form-select"><option>AVAILABLE</option><option>OUT_OF_STOCK</option><option>MAINTENANCE</option><option>INACTIVE</option></select></div>
+<div class="col-12"><label class="form-label">Price Change Reason / Notes</label><input id="priceReason" class="form-control"></div>
+</div></div><div class="modal-footer"><button type="submit" class="btn btn-dark">Save Item</button></div></form></div></div>
+<div class="modal fade" id="photoModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">Photos</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+<div class="modal-body"><input type="hidden" id="photoItemId"><div class="d-flex gap-2 mb-3"><input type="file" id="itemPhotoFile" accept="image/*" class="form-control"><button class="btn btn-warning fw-semibold" onclick="upPhoto()">Upload</button></div><div id="photoList" class="d-flex flex-wrap gap-2"></div></div></div></div></div>
+<div class="modal fade" id="histModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">Price History</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><ul id="histList" class="list-group small"></ul></div></div></div></div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script><script src="/js/api.js"></script><script>
+renderAdminSidebar('items.html'); loadBusinessIdentity();
+const im=new bootstrap.Modal(itemModal), pm=new bootstrap.Modal(photoModal), hm=new bootstrap.Modal(histModal); let cache=[];
+(async()=>{ const cats=await(await apiFetch('/api/admin/categories')).json(); cats.forEach(c=>{ filterCat.add(new Option(c.name,c.id)); itemCategory.add(new Option(c.name,c.id)); }); loadI(); })();
+async function loadI(){ const [sb,d]=sortSelect.value.split(':'); const p=new URLSearchParams({categoryId:filterCat.value,keyword:searchBox.value.trim(),sortBy:sb,dir:d});
+    const r=await apiFetch(`/api/admin/items?${p}`); if(!r||!r.ok) return; cache=await r.json();
+    itemsTable.innerHTML=cache.map(i=>{ const ph=(i.images||[]).find(x=>x.isPrimary)||(i.images||[])[0]; return `<tr>
+    <td class="fw-semibold">${i.itemCode}</td><td>${ph?`<img src="${ph.imageUrl}" height="34" width="34" class="rounded object-fit-cover">`:'-'}</td>
+    <td><strong>${i.name}</strong><br><small class="text-muted">${i.nameTe||''}</small></td><td>${i.category?i.category.name:''}</td>
+    <td><span class="badge bg-success">${i.availableQuantity}</span> / ${i.totalQuantity} / <span class="text-danger">${i.damagedQuantity}</span></td>
+    <td class="fw-bold">â‚¹${Number(i.rentalPrice).toFixed(2)}</td><td><span class="badge bg-secondary">${i.status}</span></td>
+    <td class="text-end text-nowrap"><button class="btn btn-sm btn-outline-primary" onclick="editI(${i.id})">Edit</button> <button class="btn btn-sm btn-outline-warning" onclick="openP(${i.id})"><i class="bi bi-image"></i></button> <button class="btn btn-sm btn-outline-info" onclick="openH(${i.id})"><i class="bi bi-clock-history"></i></button> <button class="btn btn-sm btn-outline-danger" onclick="delI(${i.id})"><i class="bi bi-trash"></i></button></td></tr>`; }).join('');
+}
+function openI(){ itemId.value=''; itemForm.reset(); im.show(); }
+function editI(id){ const i=cache.find(x=>x.id===id); itemId.value=i.id; itemCode.value=i.itemCode; itemCategory.value=i.category.id; itemName.value=i.name; itemNameTe.value=i.nameTe||''; totalQty.value=i.totalQuantity; availQty.value=i.availableQuantity; dmgQty.value=i.damagedQuantity; rentalPrice.value=i.rentalPrice; priceUnit.value=i.priceUnit; itemStatus.value=i.status; im.show(); }
+itemForm.addEventListener('submit', async e => { e.preventDefault(); const id=itemId.value;
+    const r=await apiFetch(id?`/api/admin/items/${id}`:'/api/admin/items',{method:id?'PUT':'POST',body:JSON.stringify({itemCode:itemCode.value.trim(),categoryId:Number(itemCategory.value),name:itemName.value.trim(),nameTe:itemNameTe.value.trim(),totalQuantity:Number(totalQty.value),availableQuantity:availQty.value?Number(availQty.value):null,damagedQuantity:Number(dmgQty.value||0),rentalPrice:Number(rentalPrice.value),priceUnit:priceUnit.value,status:itemStatus.value,priceChangeReason:priceReason.value.trim()})});
+    if(r&&r.ok){ im.hide(); loadI(); } else { const d=await r.json(); alert(d.error); }
+});
+async function delI(id){ if(!confirm('Delete item?')) return; const r=await apiFetch(`/api/admin/items/${id}`,{method:'DELETE'}); if(r&&r.ok) loadI(); }
+function openP(id){ photoItemId.value=id; renderP(id); pm.show(); }
+function renderP(id){ const it=cache.find(x=>x.id===id); photoList.innerHTML=(it.images||[]).map(x=>`<div class="position-relative border p-1"><img src="${x.imageUrl}" height="70" width="70" class="object-fit-cover"><button class="btn btn-danger btn-sm position-absolute top-0 end-0 py-0 px-1" onclick="delP(${x.id},${id})">&times;</button></div>`).join('')||'No photos'; }
+async function upPhoto(){ const id=Number(photoItemId.value), f=itemPhotoFile.files[0]; if(!f) return; const fd=new FormData(); fd.append('file',f); fd.append('primary','true'); await apiFetch(`/api/admin/items/${id}/images`,{method:'POST',body:fd}); await loadI(); renderP(id); }
+async function delP(imgId,itId){ await apiFetch(`/api/admin/items/images/${imgId}`,{method:'DELETE'}); await loadI(); renderP(itId); }
+async function openH(id){ const l=await(await apiFetch(`/api/admin/items/${id}/price-history`)).json(); histList.innerHTML=l.map(h=>`<li class="list-group-item">â‚¹${h.oldPrice} &rarr; <strong>â‚¹${h.newPrice}</strong> (${h.changeReason||''})</li>`).join('')||'<li class="list-group-item">No history</li>'; hm.show(); }
+async function impExcel(inp){ if(!inp.files[0]) return; const fd=new FormData(); fd.append('file',inp.files[0]); const d=await(await apiFetch('/api/admin/items/import/excel',{method:'POST',body:fd})).json(); alert(`Imported: ${d.created} created, ${d.updated} updated`); inp.value=''; loadI(); }
+</script></body></html>
