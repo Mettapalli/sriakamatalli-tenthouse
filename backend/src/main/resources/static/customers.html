@@ -1,0 +1,29 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Customers</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"><link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"><link href="/css/style.css" rel="stylesheet"></head><body>
+<div class="container-fluid"><div class="row"><aside id="adminSidebar" class="col-md-3 col-lg-2 admin-sidebar p-3"></aside>
+<main class="col-md-9 col-lg-10 p-4"><div class="d-flex justify-content-between mb-3"><h3 class="fw-bold">Customer Management</h3><button class="btn btn-dark" onclick="openC()">+ Add Customer</button></div>
+<div class="input-group mb-3" style="max-width:400px;"><input id="qBox" class="form-control" placeholder="Search name/mobile..."><button class="btn btn-dark" onclick="loadC()">Search</button></div>
+<div class="card shadow-sm"><table class="table table-hover mb-0"><thead class="table-light"><tr><th>Code</th><th>Name</th><th>Mobile</th><th>Location</th><th class="text-end">Actions</th></tr></thead><tbody id="custTable"></tbody></table></div>
+</main></div></div>
+<div class="modal fade" id="cModal" tabindex="-1"><div class="modal-dialog"><form id="cForm" class="modal-content">
+<div class="modal-header"><h5 class="modal-title">Customer</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+<div class="modal-body"><input type="hidden" id="cId">
+<div class="mb-2"><label class="form-label">Full Name *</label><input id="cName" class="form-control" required></div>
+<div class="mb-2"><label class="form-label">Mobile *</label><input id="cMob" class="form-control" required></div>
+<div class="mb-2"><label class="form-label">WhatsApp</label><input id="cWa" class="form-control"></div>
+<div class="mb-2"><label class="form-label">Address</label><input id="cAddr" class="form-control"></div>
+<div><label class="form-label">Default Event Location</label><input id="cLoc" class="form-control"></div></div>
+<div class="modal-footer"><button type="submit" class="btn btn-dark">Save</button></div></form></div></div>
+<div class="modal fade" id="hModal" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">Booking History</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body" id="hBody"></div></div></div></div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script><script src="/js/api.js"></script><script>
+renderAdminSidebar('customers.html'); loadBusinessIdentity();
+const cm=new bootstrap.Modal(cModal), hm=new bootstrap.Modal(hModal); let cache=[];
+async function loadC(){ const r=await apiFetch(`/api/admin/customers?q=${encodeURIComponent(qBox.value.trim())}`); if(!r||!r.ok) return; cache=await r.json();
+    custTable.innerHTML=cache.map(c=>`<tr><td>${c.customerCode}</td><td class="fw-semibold">${c.fullName}</td><td>${c.mobileNumber}</td><td>${c.defaultEventLocation||'-'}</td><td class="text-end"><button class="btn btn-sm btn-outline-info" onclick="hist(${c.id})">Bookings</button> <button class="btn btn-sm btn-outline-primary" onclick="editC(${c.id})">Edit</button></td></tr>`).join('');
+}
+function openC(){ cId.value=''; cForm.reset(); cm.show(); }
+function editC(id){ const c=cache.find(x=>x.id===id); cId.value=c.id; cName.value=c.fullName; cMob.value=c.mobileNumber; cWa.value=c.whatsappNumber||''; cAddr.value=c.address||''; cLoc.value=c.defaultEventLocation||''; cm.show(); }
+cForm.addEventListener('submit', async e => { e.preventDefault(); const id=cId.value; const r=await apiFetch(id?`/api/admin/customers/${id}`:'/api/admin/customers',{method:id?'PUT':'POST',body:JSON.stringify({fullName:cName.value.trim(),mobileNumber:cMob.value.trim(),whatsappNumber:cWa.value.trim(),address:cAddr.value.trim(),defaultEventLocation:cLoc.value.trim()})}); if(r&&r.ok){ cm.hide(); loadC(); } });
+async function hist(id){ const l=await(await apiFetch(`/api/admin/customers/${id}/bookings`)).json(); hBody.innerHTML=l.length?`<table class="table table-sm"><tr><th>#</th><th>Event</th><th>Dates</th><th>Total</th><th>Bal</th></tr>${l.map(b=>`<tr><td>${b.bookingNumber}</td><td>${b.event.eventName}</td><td>${b.startDate}</td><td>â‚¹${b.finalAmount}</td><td class="text-danger">â‚¹${b.balanceAmount}</td></tr>`).join('')}</table>`:'No bookings yet.'; hm.show(); }
+loadC();
+</script></body></html>
