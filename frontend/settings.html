@@ -1,0 +1,33 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Business Settings</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"><link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"><link href="/css/style.css" rel="stylesheet"></head><body>
+<div class="container-fluid"><div class="row"><aside id="adminSidebar" class="col-md-3 col-lg-2 admin-sidebar p-3"></aside>
+<main class="col-md-9 col-lg-10 p-4"><h3 class="fw-bold mb-3">Business Identity &amp; Security</h3>
+<div id="statusMsg" class="alert d-none"></div>
+<form id="settingsForm" class="card p-4 shadow-sm mb-4"><div class="row g-2">
+<div class="col-md-6"><label class="form-label">Business Name</label><input id="businessName" class="form-control" required></div>
+<div class="col-md-6"><label class="form-label">Tagline</label><input id="tagline" class="form-control"></div>
+<div class="col-md-6"><label class="form-label">Owner Names</label><input id="ownerNames" class="form-control" required></div>
+<div class="col-md-3"><label class="form-label">Primary Mobile</label><input id="primaryMobile" class="form-control" required></div>
+<div class="col-md-3"><label class="form-label">Secondary Mobile</label><input id="secondaryMobile" class="form-control"></div>
+<div class="col-md-3"><label class="form-label">WhatsApp 1</label><input id="whatsappPrimary" class="form-control"></div>
+<div class="col-md-3"><label class="form-label">WhatsApp 2</label><input id="whatsappSecondary" class="form-control"></div>
+<div class="col-md-6"><label class="form-label">Email</label><input id="email" class="form-control"></div>
+<div class="col-md-4"><label class="form-label">Address</label><input id="address" class="form-control"></div>
+<div class="col-md-3"><label class="form-label">City</label><input id="city" class="form-control"></div>
+<div class="col-md-3"><label class="form-label">State</label><input id="state" class="form-control"></div>
+<div class="col-md-2"><label class="form-label">PIN</label><input id="pinCode" class="form-control"></div>
+<div class="col-md-6"><label class="form-label">GST Number</label><input id="gstNumber" class="form-control"></div>
+<div class="col-md-6"><label class="form-label">Website Name</label><input id="websiteName" class="form-control"></div>
+<div class="col-12"><label class="form-label">Terms &amp; Conditions</label><textarea id="termsAndConditions" rows="3" class="form-control"></textarea></div>
+</div><button type="submit" class="btn btn-dark mt-3">Save Business Details</button></form>
+<div class="card p-4 shadow-sm mb-4"><h5 class="fw-bold">Upload Logo</h5><div class="d-flex align-items-center gap-3 mt-2"><img id="logoPreview" src="" height="55" class="rounded border d-none"><input type="file" id="logoFile" accept="image/*" class="form-control w-auto"><button class="btn btn-warning fw-semibold" onclick="upLogo()">Upload Logo</button></div></div>
+<div class="card p-4 shadow-sm"><h5 class="fw-bold">Change Admin Password</h5><div id="pwdMsg" class="alert d-none mt-2 py-2 small"></div>
+<form id="pwdForm" class="row g-2 mt-1"><div class="col-md-4"><input id="currPwd" type="password" class="form-control" placeholder="Current Password" required></div><div class="col-md-4"><input id="newPwd" type="password" minlength="6" class="form-control" placeholder="New Password (min 6 chars)" required></div><div class="col-md-4"><button type="submit" class="btn btn-danger w-100">Update Password</button></div></form></div>
+</main></div></div><script src="/js/api.js"></script><script>
+renderAdminSidebar('settings.html');
+const fs=['businessName','tagline','ownerNames','primaryMobile','secondaryMobile','whatsappPrimary','whatsappSecondary','email','address','city','state','pinCode','gstNumber','websiteName','termsAndConditions'];
+(async()=>{ const r=await apiFetch('/api/admin/business'); if(!r||!r.ok) return; const d=await r.json(); fs.forEach(f=>document.getElementById(f).value=d[f]||''); if(d.logoPath){ logoPreview.src=d.logoPath; logoPreview.classList.remove('d-none'); } })();
+settingsForm.addEventListener('submit', async e => { e.preventDefault(); const p={}; fs.forEach(f=>p[f]=document.getElementById(f).value.trim()); const r=await apiFetch('/api/admin/business',{method:'PUT',body:JSON.stringify(p)}); statusMsg.className=r&&r.ok?'alert alert-success':'alert alert-danger'; statusMsg.textContent=r&&r.ok?'Saved!':'Error'; statusMsg.classList.remove('d-none'); });
+async function upLogo(){ const f=logoFile.files[0]; if(!f) return; const fd=new FormData(); fd.append('file',f); const r=await apiFetch('/api/admin/business/logo',{method:'POST',body:fd}); if(r&&r.ok){ const d=await r.json(); logoPreview.src=d.logoPath; logoPreview.classList.remove('d-none'); } }
+pwdForm.addEventListener('submit', async e => { e.preventDefault(); const r=await apiFetch('/api/auth/change-password',{method:'POST',body:JSON.stringify({currentPassword:currPwd.value,newPassword:newPwd.value})}); const d=await r.json(); pwdMsg.className=r.ok?'alert alert-success mt-2 py-2 small':'alert alert-danger mt-2 py-2 small'; pwdMsg.textContent=d.message||d.error; pwdMsg.classList.remove('d-none'); if(r.ok) pwdForm.reset(); });
+</script></body></html>
