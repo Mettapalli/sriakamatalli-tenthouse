@@ -1,0 +1,54 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Events & Bookings</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"><link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"><link href="/css/style.css" rel="stylesheet"></head><body>
+<div class="container-fluid"><div class="row"><aside id="adminSidebar" class="col-md-3 col-lg-2 admin-sidebar p-3"></aside>
+<main class="col-md-9 col-lg-10 p-4"><div class="d-flex justify-content-between mb-3"><h3 class="fw-bold">Events, Bookings &amp; Cost Calculator</h3><button class="btn btn-dark" onclick="openB()">+ New Booking</button></div>
+<div class="card shadow-sm"><div class="table-responsive"><table class="table table-hover align-middle mb-0 small"><thead class="table-light"><tr><th>Booking #</th><th>Customer</th><th>Event</th><th>Dates</th><th>Total</th><th>Advance</th><th>Balance</th><th>Status</th><th class="text-end">Actions</th></tr></thead><tbody id="bkTable"></tbody></table></div></div>
+</main></div></div>
+<div class="modal fade" id="bkModal" tabindex="-1"><div class="modal-dialog modal-xl"><form id="bkForm" class="modal-content">
+<div class="modal-header"><h5 class="modal-title">New Event Booking</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+<div class="modal-body"><div class="row g-2 mb-3">
+<div class="col-md-4"><label class="form-label">Customer *</label><select id="bkCust" class="form-select" required></select></div>
+<div class="col-md-4"><label class="form-label">Event Name *</label><input id="bkEvent" class="form-control" required></div>
+<div class="col-md-4"><label class="form-label">Event Type</label><select id="bkType" class="form-select"><option>WEDDING</option><option>RECEPTION</option><option>ENGAGEMENT</option><option>BIRTHDAY</option><option>RELIGIOUS</option><option>OTHER</option></select></div>
+<div class="col-md-3"><label class="form-label">Start Date</label><input id="bkStart" type="date" class="form-control" required onchange="loadAvail()"></div>
+<div class="col-md-3"><label class="form-label">End Date</label><input id="bkEnd" type="date" class="form-control" required onchange="loadAvail()"></div>
+<div class="col-md-4"><label class="form-label">Event Address *</label><input id="bkAddr" class="form-control" required></div>
+<div class="col-md-2"><label class="form-label">Status</label><select id="bkStat" class="form-select"><option>CONFIRMED</option><option>QUOTATION_SENT</option><option>ENQUIRY</option></select></div></div>
+<div class="border rounded p-2 mb-3 bg-light"><div class="d-flex justify-content-between mb-2"><strong>Items (Live Stock Checked)</strong><div class="d-flex gap-2"><select id="itemPick" class="form-select form-select-sm" style="min-width:280px;"></select><button type="button" class="btn btn-sm btn-warning" onclick="addLine()">+ Add</button></div></div>
+<table class="table table-sm bg-white mb-0"><thead><tr><th>Item</th><th>Avail</th><th>Qty</th><th>Rate</th><th>Total</th><th></th></tr></thead><tbody id="selBody"></tbody></table></div>
+<div class="row g-2">
+<div class="col-md-2"><label class="small">Transport</label><input id="chT" type="number" value="0" min="0" class="form-control form-control-sm calc"></div>
+<div class="col-md-2"><label class="small">Labour</label><input id="chL" type="number" value="0" min="0" class="form-control form-control-sm calc"></div>
+<div class="col-md-2"><label class="small">Decor</label><input id="chD" type="number" value="0" min="0" class="form-control form-control-sm calc"></div>
+<div class="col-md-2"><label class="small">Other</label><input id="chO" type="number" value="0" min="0" class="form-control form-control-sm calc"></div>
+<div class="col-md-2"><label class="small">Discount</label><div class="input-group input-group-sm"><select id="dType" class="form-select calc"><option value="NONE">None</option><option value="FIXED">â‚¹</option><option value="PERCENTAGE">%</option></select><input id="dVal" type="number" value="0" min="0" class="form-control calc"></div></div>
+<div class="col-md-2"><label class="small">Advance Paid</label><input id="advP" type="number" value="0" min="0" class="form-control form-control-sm calc"></div></div>
+<div class="alert alert-dark mt-3 mb-0 d-flex justify-content-between fw-bold"><span>Subtotal: â‚¹<span id="lSub">0.00</span></span><span>Final: â‚¹<span id="lFin">0.00</span></span><span class="text-warning">Balance: â‚¹<span id="lBal">0.00</span></span></div>
+</div><div class="modal-footer"><button type="submit" class="btn btn-dark">Save Booking</button></div></form></div></div>
+<div class="modal fade" id="retModal" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">Return &amp; Damage Check</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+<div class="modal-body"><input type="hidden" id="retId"><table class="table table-sm"><thead><tr><th>Item</th><th>Booked</th><th>Returned</th><th>Damaged</th><th>Missing</th></tr></thead><tbody id="retBody"></tbody></table></div>
+<div class="modal-footer"><button class="btn btn-success" onclick="subRet()">Complete Booking</button></div></div></div></div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script><script src="/js/api.js"></script><script>
+renderAdminSidebar('bookings.html'); loadBusinessIdentity();
+const bm=new bootstrap.Modal(bkModal), rm=new bootstrap.Modal(retModal); let cache=[], avail=[], lines=[];
+(async()=>{ const c=await(await apiFetch('/api/admin/customers')).json(); bkCust.innerHTML=c.map(x=>`<option value="${x.id}">${x.fullName} (${x.mobileNumber})</option>`).join(''); loadB(); })();
+async function loadB(){ const r=await apiFetch('/api/admin/bookings'); if(!r||!r.ok) return; cache=await r.json();
+    bkTable.innerHTML=cache.map(b=>`<tr><td class="fw-semibold">${b.bookingNumber}</td><td>${b.customer.fullName}</td><td>${b.event.eventName}</td><td>${b.startDate} to ${b.endDate}</td><td class="fw-bold">â‚¹${b.finalAmount}</td><td class="text-success">â‚¹${b.advancePaid}</td><td class="text-danger fw-bold">â‚¹${b.balanceAmount}</td><td><span class="badge bg-primary">${b.status}</span></td><td class="text-end text-nowrap">${b.status!=='COMPLETED'&&b.status!=='CANCELLED'?`<button class="btn btn-sm btn-success" onclick="openRet(${b.id})">Complete</button> <button class="btn btn-sm btn-outline-danger" onclick="cancelB(${b.id})">Cancel</button>`:''}</td></tr>`).join('');
+}
+function openB(){ lines=[]; const t=new Date().toISOString().split('T')[0]; bkStart.value=t; bkEnd.value=t; renderL(); loadAvail(); bm.show(); }
+async function loadAvail(){ if(!bkStart.value||!bkEnd.value||bkEnd.value<bkStart.value) return; avail=await(await apiFetch(`/api/admin/bookings/availability?startDate=${bkStart.value}&endDate=${bkEnd.value}`)).json(); itemPick.innerHTML=avail.map(i=>`<option value="${i.id}">${i.name} (Avail:${i.availableForDates}) - â‚¹${i.rentalPrice}</option>`).join(''); }
+function addLine(){ const id=Number(itemPick.value), i=avail.find(x=>x.id===id); if(!i||lines.some(l=>l.itemId===id)) return; lines.push({itemId:id,name:i.name,avail:i.availableForDates,qty:1,rate:Number(i.rentalPrice)}); renderL(); }
+function renderL(){ selBody.innerHTML=lines.map((l,i)=>`<tr><td>${l.name}</td><td>${l.avail}</td><td><input type="number" min="1" max="${l.avail}" value="${l.qty}" class="form-control form-control-sm" style="width:75px" onchange="lines[${i}].qty=Number(this.value);recalc()"></td><td><input type="number" step="0.01" value="${l.rate}" class="form-control form-control-sm" style="width:90px" onchange="lines[${i}].rate=Number(this.value);recalc()"></td><td>â‚¹${(l.qty*l.rate).toFixed(2)}</td><td><button type="button" class="btn btn-sm btn-outline-danger" onclick="lines.splice(${i},1);renderL()">&times;</button></td></tr>`).join(''); recalc(); }
+function recalc(){ const sub=lines.reduce((s,l)=>s+l.qty*l.rate,0), ex=Number(chT.value||0)+Number(chL.value||0)+Number(chD.value||0)+Number(chO.value||0), gr=sub+ex;
+    let d=dType.value==='PERCENTAGE'?gr*Number(dVal.value||0)/100:(dType.value==='FIXED'?Number(dVal.value||0):0); if(d>gr) d=gr; const f=gr-d;
+    lSub.textContent=sub.toFixed(2); lFin.textContent=f.toFixed(2); lBal.textContent=Math.max(0,f-Number(advP.value||0)).toFixed(2);
+}
+document.querySelectorAll('.calc').forEach(e=>e.addEventListener('input',recalc));
+bkForm.addEventListener('submit', async e => { e.preventDefault(); if(!lines.length) return alert('Add items');
+    const r=await apiFetch('/api/admin/bookings',{method:'POST',body:JSON.stringify({customerId:Number(bkCust.value),eventName:bkEvent.value.trim(),eventType:bkType.value,startDate:bkStart.value,endDate:bkEnd.value,eventAddress:bkAddr.value.trim(),status:bkStat.value,transportationCharge:Number(chT.value||0),labourCharge:Number(chL.value||0),decorationCharge:Number(chD.value||0),otherCharges:Number(chO.value||0),discountType:dType.value,discountValue:Number(dVal.value||0),advancePaid:Number(advP.value||0),items:lines.map(l=>({itemId:l.itemId,quantity:l.qty,unitPrice:l.rate}))})});
+    if(r&&r.ok){ bm.hide(); loadB(); } else { const d=await r.json(); alert(d.error); }
+});
+function openRet(id){ const b=cache.find(x=>x.id===id); retId.value=id; retBody.innerHTML=b.items.map(bi=>`<tr data-id="${bi.id}"><td>${bi.item.name}</td><td>${bi.quantity}</td><td><input type="number" class="form-control form-control-sm rq" value="${bi.quantity}"></td><td><input type="number" class="form-control form-control-sm dq" value="0"></td><td><input type="number" class="form-control form-control-sm mq" value="0"></td></tr>`).join(''); rm.show(); }
+async function subRet(){ const ls=[...retBody.querySelectorAll('tr')].map(tr=>({bookingItemId:Number(tr.dataset.id),returnedQty:Number(tr.querySelector('.rq').value||0),damagedQty:Number(tr.querySelector('.dq').value||0),missingQty:Number(tr.querySelector('.mq').value||0)})); await apiFetch(`/api/admin/bookings/${retId.value}/complete`,{method:'POST',body:JSON.stringify({lines:ls})}); rm.hide(); loadB(); }
+async function cancelB(id){ if(!confirm('Cancel?')) return; await apiFetch(`/api/admin/bookings/${id}/status?status=CANCELLED`,{method:'PUT'}); loadB(); }
+</script></body></html>
