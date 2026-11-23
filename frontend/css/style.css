@@ -1,0 +1,8 @@
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f8f9fa; }
+.hero-banner { background: linear-gradient(135deg, #4a0d66 0%, #880e4f 60%, #b45309 100%); color: #fff; padding: 4rem 1rem; }
+.item-card { transition: transform .2s ease, box-shadow .2s ease; border: 1px solid #e5e7eb; }
+.item-card:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,.08); }
+.admin-sidebar { min-height: 100vh; background: #1e1b4b; color: #e0e7ff; }
+.admin-sidebar a { color: #c7d2fe; text-decoration: none; display: block; padding: .6rem .9rem; border-radius: .4rem; margin-bottom: .2rem; font-size: .92rem; }
+.admin-sidebar a:hover, .admin-sidebar a.active { background: #3730a3; color: #fff; }
+.kpi-card { border-left: 4px solid #f59e0b; }
