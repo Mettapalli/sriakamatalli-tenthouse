@@ -1,0 +1,13 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Gallery</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"><link href="/css/style.css" rel="stylesheet"></head><body>
+<nav class="navbar navbar-dark bg-dark"><div class="container"><a class="navbar-brand fw-bold" href="/index.html" data-biz-name>Tent House</a>
+<div class="d-flex gap-2"><a class="btn btn-outline-light btn-sm" href="/index.html">Home</a><a class="btn btn-outline-light btn-sm" href="/catalogue.html">Catalogue</a></div></div></nav>
+<div class="container py-5"><h2 class="fw-bold mb-3">Item &amp; Event Gallery</h2><div class="row g-3" id="galleryGrid"></div></div>
+<script src="/js/api.js"></script><script>
+loadBusinessIdentity();
+fetch('/api/public/items').then(r=>r.json()).then(items=>{
+    const w = items.filter(i=>i.images&&i.images.length>0);
+    document.getElementById('galleryGrid').innerHTML = w.length ? w.map(i=>`<div class="col-sm-6 col-md-4 col-lg-3"><div class="card shadow-sm h-100"><img src="${i.images[0].imageUrl}" class="card-img-top" style="height:190px;object-fit:cover;"><div class="card-body"><h6 class="fw-bold mb-0">${i.name}</h6><small class="text-muted">${i.nameTe||''}</small></div></div></div>`).join('')
+    : '<div class="col-12"><div class="alert alert-info">Upload item photographs from Admin &rarr; Items &amp; Pricing to showcase them here!</div></div>';
+});
+</script></body></html>
